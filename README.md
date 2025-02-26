@@ -30,6 +30,11 @@ This WebGL application enables the creation and visualization of cubic B-Spline 
 | `Space`                | Pause/resume animations            |
 | `P`                    | Show/hide sample points            |
 | `L`                    | Show/hide curve segments           |
+| `S`                    | Toggle special mode                |
+| `0`                    | B-Spline Mode                      |
+| `1`                    | Bezier Mode                        |
+| `2`                    | Catmull-Rom Mode                   |
+
 
 ## Technical Details
 
