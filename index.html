@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Projeto 01</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap"
+			rel="stylesheet" />
+		<link rel="stylesheet" href="style.css" />
+	</head>
+	<body style="background-color: black">
+		<script type="module" src="./app.js"></script>
+		<div class="container">
+			<canvas id="gl-canvas" width="512" height="512"></canvas>
+			<div class="controls-container">
+				<div class="controls">
+					<h2>Controls</h2>
+					<h3><span class="sub">Click and Drag to draw a curve</span></h3>
+					<p><span class="key">Spacebar</span> - Toggle animation</p>
+					<p><span class="key">"C"</span> - Clear all curves</p>
+					<p><span class="key">"Z"</span> - End a curve</p>
+					<p><span class="key">"+"</span> - Increase the number of segments</p>
+					<p><span class="key">"-"</span> - Decrease the number of segments</p>
+					<p><span class="key">">"</span> - Increase speed</p>
+					<p><span class="key">"<"</span> - Decrease speed</p>
+					<p><span class="key">"P"</span> - Toggle visibility of points</p>
+					<p><span class="key">"L"</span> - Toggle visibility of segments</p>
+					<p><span class="key">"S"</span> - Toggle special mode</p>
+					<form class="form">
+						<div class="r-div">
+							<label for="buttonMatrix0"
+								><span class="key">"0"</span> - B-Spline</label
+							>
+							<input
+								id="buttonMatrix0"
+								type="radio"
+								name="r"
+								value="0"
+								checked />
+						</div>
+						<div class="r-div">
+							<label for="buttonMatrix1"
+								><span class="key">"1"</span> - Bezier</label
+							>
+							<input id="buttonMatrix1" type="radio" name="r" value="1" />
+						</div>
+						<div class="r-div">
+							<label for="buttonMatrix2"
+								><span class="key">"2"</span> - Catmull-Rom</label
+							>
+							<input id="buttonMatrix2" type="radio" name="r" value="2" />
+						</div>
+					</form>
+					<h3><span class="sub">Sliders</span></h3>
+					<div>
+						Speed: -100%
+						<input
+							id="slider"
+							type="range"
+							min="-1"
+							max="1"
+							step="0.01"
+							value="0" />
+						100%
+					</div>
+					<div class="slider2">
+						Segments: 1
+						<input
+							id="slider2"
+							type="range"
+							min="1"
+							max="50"
+							step="1"
+							value="1" />
+						50
+					</div>
+					<h3><span class="sub">Information</span></h3>
+					<div class="infos">
+						<label>Nº of Curves: <span id="curveCount">0</span> </label>
+						<label>Segments: <span id="numSegmentsDisplay">5</span> </label>
+					</div>
+					<div class="infos">
+						<label>Special Mode: <span id="specialMode">false</span> </label>
+						<label>Animation: <span id="animationDisplay">true</span> </label>
+					</div>
+					<div class="infos">
+						<label>Speed: <span id="velocityCount">0</span> </label>
+						<label>Type: <span id="curveTypeDisplay">B-Spline</span> </label>
+					</div>
+					<div class="button">
+						<button id="clear">Clear</button>
+					</div>
+					<div class="button">
+						<button id="specialM" class="button2">Special Mode</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
