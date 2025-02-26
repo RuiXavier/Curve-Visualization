@@ -46,7 +46,7 @@ This WebGL application enables the creation and visualization of cubic B-Spline 
 
 1. Clone the repository:
    ```sh
-   git clone <repo-url>
-   cd <repo-name>
+   git clone https://github.com/RuiXavier/Curve-Visualization.git
+   cd Curve-Visualization/
    ```
 2. Open `index.html` in a WebGL-compatible browser.
