@@ -6,11 +6,11 @@
  */
 
 import {
-  buildProgramFromSources,
-  loadShadersFromURLS,
-  setupWebGL,
-} from "../../libs/utils.js";
-import { vec2 } from "../../libs/MV.js";
+	buildProgramFromSources,
+	loadShadersFromURLS,
+	setupWebGL,
+} from "./libs/utils.js";
+import { vec2 } from "./libs/MV.js";
 import Curve from "./curve.js";
 
 // Constants
@@ -44,254 +44,254 @@ let gl, canvas, aspect;
 let draw_program_bezier, draw_program_bspline, draw_points_bspline;
 let draw_program_catmull_rom, draw_points_catmull_rom, draw_points_bezier;
 let initial_position = null,
-  mouse_pressed = false,
-  is_dragging = false;
+	mouse_pressed = false,
+	is_dragging = false;
 let control_points = [],
-  curves = [],
-  indices,
-  index_buffer;
+	curves = [],
+	indices,
+	index_buffer;
 let base_velocity = DEFAULT_VELOCITY,
-  num_segments = DEFAULT_SEGMENTS;
+	num_segments = DEFAULT_SEGMENTS;
 let curve_mode = BSPLINE_MODE,
-  is_animating = DEFAULT_ANIMATION;
+	is_animating = DEFAULT_ANIMATION;
 let next_curve_color, next_curve_size;
 let draw_lines = DEFAULT_TOGGLE_LINES,
-  draw_sample_points = DEFAULT_TOGGLE_POINTS;
+	draw_sample_points = DEFAULT_TOGGLE_POINTS;
 let special_mode = DEFAULT_SPECIAL_MODE;
 let next_shape_type;
 let last_time = null;
 
 // Event Handlers
 function handleResize(event) {
-  const width = event.target.innerWidth;
-  const height = event.target.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-  gl.viewport(0, 0, width, height);
+	const width = event.target.innerWidth;
+	const height = event.target.innerHeight;
+	canvas.width = width;
+	canvas.height = height;
+	gl.viewport(0, 0, width, height);
 }
 
 function handleSliderInput(event) {
-  base_velocity = parseFloat(event.target.value);
-  curves.forEach((curve) => curve.updateVelocity(base_velocity));
-  document.getElementById("velocityCount").textContent = base_velocity;
+	base_velocity = parseFloat(event.target.value);
+	curves.forEach((curve) => curve.updateVelocity(base_velocity));
+	document.getElementById("velocityCount").textContent = base_velocity;
 }
 
 function handleSlider2Input(event) {
-  num_segments = parseFloat(event.target.value);
-  curves.forEach((curve) => curve.updateSegmentNum(num_segments));
-  document.getElementById("numSegmentsDisplay").textContent = num_segments;
+	num_segments = parseFloat(event.target.value);
+	curves.forEach((curve) => curve.updateSegmentNum(num_segments));
+	document.getElementById("numSegmentsDisplay").textContent = num_segments;
 }
 
 function handleClearButtonClick() {
-  clearAll();
-  document.getElementById("curveCount").textContent = curves.length;
+	clearAll();
+	document.getElementById("curveCount").textContent = curves.length;
 }
 
 function handleCurveModeChange(mode) {
-  curve_mode = mode;
-  updateCurveMode();
-  document.getElementById("curveTypeDisplay").textContent = getCurveType();
-  if (mode === CATMULL_ROM_MODE) {
-    document.getElementById("buttonMatrix2").checked = true;
-  } else if (mode === BEZIER_MODE) {
-    document.getElementById("buttonMatrix1").checked = true;
-  } else {
-    document.getElementById("buttonMatrix0").checked = true;
-  }
+	curve_mode = mode;
+	updateCurveMode();
+	document.getElementById("curveTypeDisplay").textContent = getCurveType();
+	if (mode === CATMULL_ROM_MODE) {
+		document.getElementById("buttonMatrix2").checked = true;
+	} else if (mode === BEZIER_MODE) {
+		document.getElementById("buttonMatrix1").checked = true;
+	} else {
+		document.getElementById("buttonMatrix0").checked = true;
+	}
 }
 
 function handleMouseDown(event) {
-  if (event.button !== 0) return;
-  initial_position = getMousePosition(event);
-  mouse_pressed = true;
-  is_dragging = false;
+	if (event.button !== 0) return;
+	initial_position = getMousePosition(event);
+	mouse_pressed = true;
+	is_dragging = false;
 }
 
 function handleMouseMove(event) {
-  if (!mouse_pressed) return;
-  const current_position = getMousePosition(event);
-  const distance = calculateDistance(initial_position, current_position);
-  if (distance > MOVE_THRESHOLD && !is_dragging) {
-    is_dragging = true;
-    if (control_points.length > 0) finalizeCurve();
-  } else if (is_dragging) {
-    addControlPoint(current_position);
-  }
+	if (!mouse_pressed) return;
+	const current_position = getMousePosition(event);
+	const distance = calculateDistance(initial_position, current_position);
+	if (distance > MOVE_THRESHOLD && !is_dragging) {
+		is_dragging = true;
+		if (control_points.length > 0) finalizeCurve();
+	} else if (is_dragging) {
+		addControlPoint(current_position);
+	}
 }
 
 function handleMouseUp(event) {
-  if (!mouse_pressed) return;
-  if (!is_dragging) {
-    addControlPoint(initial_position);
-  } else {
-    finalizeCurve();
-  }
-  mouse_pressed = false;
-  is_dragging = false;
+	if (!mouse_pressed) return;
+	if (!is_dragging) {
+		addControlPoint(initial_position);
+	} else {
+		finalizeCurve();
+	}
+	mouse_pressed = false;
+	is_dragging = false;
 }
 
 function handleKeyPress(event) {
-  const key = event.key.toLowerCase();
-  switch (key) {
-    case NEW_CURVE_KEY:
-      finalizeCurve();
-      break;
-    case CLEAR_CURVES_KEY:
-      clearAll();
-      break;
-    case ANIMATION_KEY:
-      toggleAnimation();
-      break;
-    case SEGMENT_DECREASE_KEY:
-      updateSegments(-1);
-      break;
-    case SEGMENT_INCREASE_KEY:
-      updateSegments(1);
-      break;
-    case SPEED_DECREASE_KEY:
-      updateBaseVelocity(-0.01);
-      break;
-    case SPEED_INCREASE_KEY:
-      updateBaseVelocity(0.01);
-      break;
-    case TOGGLE_LINES_KEY:
-      toggleLines();
-      break;
-    case TOGGLE_POINTS_KEY:
-      togglePoints();
-      break;
-    case BSPLINE_MODE.toString():
-      handleCurveModeChange(BSPLINE_MODE);
-      break;
-    case BEZIER_MODE.toString():
-      handleCurveModeChange(BEZIER_MODE);
-      break;
-    case CATMULL_ROM_MODE.toString():
-      handleCurveModeChange(CATMULL_ROM_MODE);
-      break;
-    case TOGGLE_SPECIAL_MODE_KEY:
-      toggleSpecialMode();
-      break;
-    default:
-      break;
-  }
+	const key = event.key.toLowerCase();
+	switch (key) {
+		case NEW_CURVE_KEY:
+			finalizeCurve();
+			break;
+		case CLEAR_CURVES_KEY:
+			clearAll();
+			break;
+		case ANIMATION_KEY:
+			toggleAnimation();
+			break;
+		case SEGMENT_DECREASE_KEY:
+			updateSegments(-1);
+			break;
+		case SEGMENT_INCREASE_KEY:
+			updateSegments(1);
+			break;
+		case SPEED_DECREASE_KEY:
+			updateBaseVelocity(-0.01);
+			break;
+		case SPEED_INCREASE_KEY:
+			updateBaseVelocity(0.01);
+			break;
+		case TOGGLE_LINES_KEY:
+			toggleLines();
+			break;
+		case TOGGLE_POINTS_KEY:
+			togglePoints();
+			break;
+		case BSPLINE_MODE.toString():
+			handleCurveModeChange(BSPLINE_MODE);
+			break;
+		case BEZIER_MODE.toString():
+			handleCurveModeChange(BEZIER_MODE);
+			break;
+		case CATMULL_ROM_MODE.toString():
+			handleCurveModeChange(CATMULL_ROM_MODE);
+			break;
+		case TOGGLE_SPECIAL_MODE_KEY:
+			toggleSpecialMode();
+			break;
+		default:
+			break;
+	}
 }
 
 // Utility Functions
 buttonMatrix2.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
+	e.stopPropagation();
 });
 
 buttonMatrix0.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
+	e.stopPropagation();
 });
 
 buttonMatrix1.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
+	e.stopPropagation();
 });
 
 slider.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
+	e.stopPropagation();
 });
 
 // Stop event propagation when interacting with the slider
 slider2.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
+	e.stopPropagation();
 });
 
 specialM.addEventListener("mousedown", function (e) {
-  e.stopPropagation();
-  toggleSpecialMode();
+	e.stopPropagation();
+	toggleSpecialMode();
 });
 
 function getMousePosition(event) {
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / canvas.width) * 2 - 1;
-  const y = -(((event.clientY - rect.top) / canvas.height) * 2 - 1);
-  return vec2(x, y);
+	const rect = canvas.getBoundingClientRect();
+	const x = ((event.clientX - rect.left) / canvas.width) * 2 - 1;
+	const y = -(((event.clientY - rect.top) / canvas.height) * 2 - 1);
+	return vec2(x, y);
 }
 
 function calculateDistance(pos1, pos2) {
-  return Math.sqrt(
-    Math.pow(pos2[0] - pos1[0], 2) + Math.pow(pos2[1] - pos1[1], 2)
-  );
+	return Math.sqrt(
+		Math.pow(pos2[0] - pos1[0], 2) + Math.pow(pos2[1] - pos1[1], 2)
+	);
 }
 
 function toggleAnimation() {
-  is_animating = !is_animating;
-  document.getElementById("animationDisplay").textContent = is_animating;
+	is_animating = !is_animating;
+	document.getElementById("animationDisplay").textContent = is_animating;
 }
 
 function updateSegments(change) {
-  num_segments = Math.max(1, Math.min(100, num_segments + change));
-  curves.forEach((curve) => curve.updateSegmentNum(num_segments));
-  document.getElementById("numSegmentsDisplay").textContent = num_segments;
-  document.getElementById("slider2").value = num_segments;
+	num_segments = Math.max(1, Math.min(100, num_segments + change));
+	curves.forEach((curve) => curve.updateSegmentNum(num_segments));
+	document.getElementById("numSegmentsDisplay").textContent = num_segments;
+	document.getElementById("slider2").value = num_segments;
 }
 
 function updateBaseVelocity(change) {
-  base_velocity =
-    Math.round(Math.max(-1, Math.min(1, base_velocity + change)) * 1000) / 1000;
-  document.getElementById("velocityCount").textContent = base_velocity;
-  document.getElementById("slider").value = base_velocity;
+	base_velocity =
+		Math.round(Math.max(-1, Math.min(1, base_velocity + change)) * 1000) / 1000;
+	document.getElementById("velocityCount").textContent = base_velocity;
+	document.getElementById("slider").value = base_velocity;
 }
 
 function calculateVelocity(curveVelocity) {
-  curves.forEach((curve) => curve.updateVelocity(curveVelocity));
+	curves.forEach((curve) => curve.updateVelocity(curveVelocity));
 }
 
 function toggleLines() {
-  draw_lines = !draw_lines;
+	draw_lines = !draw_lines;
 }
 
 function togglePoints() {
-  draw_sample_points = !draw_sample_points;
+	draw_sample_points = !draw_sample_points;
 }
 
 function toggleSpecialMode() {
-  special_mode = !special_mode;
-  curves.forEach((curve) => curve.updateSpecialMode(special_mode));
-  document.getElementById("specialMode").textContent = special_mode;
+	special_mode = !special_mode;
+	curves.forEach((curve) => curve.updateSpecialMode(special_mode));
+	document.getElementById("specialMode").textContent = special_mode;
 }
 
 function getCurveType() {
-  switch (curve_mode) {
-    case BSPLINE_MODE:
-      return "B-Spline";
-    case BEZIER_MODE:
-      return "Bezier";
-    case CATMULL_ROM_MODE:
-      return "Catmull-Rom";
-  }
+	switch (curve_mode) {
+		case BSPLINE_MODE:
+			return "B-Spline";
+		case BEZIER_MODE:
+			return "Bezier";
+		case CATMULL_ROM_MODE:
+			return "Catmull-Rom";
+	}
 }
 
 function generateNewColorSizeAndShape() {
-  next_curve_color = [
-    Math.random() + 0.05,
-    Math.random() + 0.05,
-    Math.random() + 0.05,
-    Math.random() * 0.7 + 0.3,
-  ];
-  next_curve_size = Math.random() * 20.0 + 20.0;
+	next_curve_color = [
+		Math.random() + 0.05,
+		Math.random() + 0.05,
+		Math.random() + 0.05,
+		Math.random() * 0.7 + 0.3,
+	];
+	next_curve_size = Math.random() * 20.0 + 20.0;
 
-  let tmp = Math.random() * 1.5;
-  if (tmp < 0.5) {
-    next_shape_type = 0;
-  } else if (tmp >= 0.5 && tmp < 1.0) {
-    next_shape_type = 1;
-  } else {
-    next_shape_type = 2;
-  }
+	let tmp = Math.random() * 1.5;
+	if (tmp < 0.5) {
+		next_shape_type = 0;
+	} else if (tmp >= 0.5 && tmp < 1.0) {
+		next_shape_type = 1;
+	} else {
+		next_shape_type = 2;
+	}
 }
 
 function clearAll() {
-  curves = [];
-  control_points = [];
-  document.getElementById("curveCount").textContent = curves.length;
+	curves = [];
+	control_points = [];
+	document.getElementById("curveCount").textContent = curves.length;
 }
 
 function updateCurveMode() {
-  curves.forEach((curve) => curve.updateMode(curve_mode));
+	curves.forEach((curve) => curve.updateMode(curve_mode));
 }
 
 // Main Functions
@@ -339,77 +339,77 @@ function updateCurveMode() {
  * @returns {void}
  */
 function setup(shaders) {
-  canvas = document.getElementById("gl-canvas");
-  gl = setupWebGL(canvas, { alpha: true });
+	canvas = document.getElementById("gl-canvas");
+	gl = setupWebGL(canvas, { alpha: true });
 
-  draw_program_bspline = buildProgramFromSources(
-    gl,
-    shaders["shader.vert"],
-    shaders["shader.frag"]
-  );
-  draw_program_bezier = buildProgramFromSources(
-    gl,
-    shaders["bezier.vert"],
-    shaders["shader.frag"]
-  );
-  draw_program_catmull_rom = buildProgramFromSources(
-    gl,
-    shaders["catmull_rom.vert"],
-    shaders["shader.frag"]
-  );
-  draw_points_bspline = buildProgramFromSources(
-    gl,
-    shaders["shader.vert"],
-    shaders["drawpoints.frag"]
-  );
-  draw_points_catmull_rom = buildProgramFromSources(
-    gl,
-    shaders["catmull_rom.vert"],
-    shaders["drawpoints.frag"]
-  );
-  draw_points_bezier = buildProgramFromSources(
-    gl,
-    shaders["bezier.vert"],
-    shaders["drawpoints.frag"]
-  );
+	draw_program_bspline = buildProgramFromSources(
+		gl,
+		shaders["shader.vert"],
+		shaders["shader.frag"]
+	);
+	draw_program_bezier = buildProgramFromSources(
+		gl,
+		shaders["bezier.vert"],
+		shaders["shader.frag"]
+	);
+	draw_program_catmull_rom = buildProgramFromSources(
+		gl,
+		shaders["catmull_rom.vert"],
+		shaders["shader.frag"]
+	);
+	draw_points_bspline = buildProgramFromSources(
+		gl,
+		shaders["shader.vert"],
+		shaders["drawpoints.frag"]
+	);
+	draw_points_catmull_rom = buildProgramFromSources(
+		gl,
+		shaders["catmull_rom.vert"],
+		shaders["drawpoints.frag"]
+	);
+	draw_points_bezier = buildProgramFromSources(
+		gl,
+		shaders["bezier.vert"],
+		shaders["drawpoints.frag"]
+	);
 
-  generateNewColorSizeAndShape();
+	generateNewColorSizeAndShape();
 
-  // Create the index buffer
-  index_buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, index_buffer);
-  indices = new Uint32Array(MAX_POINTS);
-  for (let i = 0; i < MAX_POINTS; i++) indices[i] = i;
-  gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+	// Create the index buffer
+	index_buffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, index_buffer);
+	indices = new Uint32Array(MAX_POINTS);
+	for (let i = 0; i < MAX_POINTS; i++) indices[i] = i;
+	gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("mousedown", handleMouseDown);
-  window.addEventListener("mousemove", handleMouseMove);
-  window.addEventListener("mouseup", handleMouseUp);
-  window.addEventListener("keydown", handleKeyPress);
+	window.addEventListener("resize", handleResize);
+	window.addEventListener("mousedown", handleMouseDown);
+	window.addEventListener("mousemove", handleMouseMove);
+	window.addEventListener("mouseup", handleMouseUp);
+	window.addEventListener("keydown", handleKeyPress);
 
-  document.getElementById("slider").oninput = handleSliderInput;
-  document.getElementById("slider2").oninput = handleSlider2Input;
-  document.getElementById("clear").onclick = handleClearButtonClick;
-  document.getElementById("buttonMatrix0").oninput = () =>
-    handleCurveModeChange(BSPLINE_MODE);
-  document.getElementById("buttonMatrix1").oninput = () =>
-    handleCurveModeChange(BEZIER_MODE);
-  document.getElementById("buttonMatrix2").oninput = () =>
-    handleCurveModeChange(CATMULL_ROM_MODE);
+	document.getElementById("slider").oninput = handleSliderInput;
+	document.getElementById("slider2").oninput = handleSlider2Input;
+	document.getElementById("clear").onclick = handleClearButtonClick;
+	document.getElementById("buttonMatrix0").oninput = () =>
+		handleCurveModeChange(BSPLINE_MODE);
+	document.getElementById("buttonMatrix1").oninput = () =>
+		handleCurveModeChange(BEZIER_MODE);
+	document.getElementById("buttonMatrix2").oninput = () =>
+		handleCurveModeChange(CATMULL_ROM_MODE);
 
-  document.getElementById("curveTypeDisplay").textContent = getCurveType();
-  document.getElementById("velocityCount").textContent = base_velocity;
-  document.getElementById("curveCount").textContent = curves.length;
-  document.getElementById("animationDisplay").textContent = is_animating;
-  document.getElementById("numSegmentsDisplay").textContent = num_segments;
+	document.getElementById("curveTypeDisplay").textContent = getCurveType();
+	document.getElementById("velocityCount").textContent = base_velocity;
+	document.getElementById("curveCount").textContent = curves.length;
+	document.getElementById("animationDisplay").textContent = is_animating;
+	document.getElementById("numSegmentsDisplay").textContent = num_segments;
 
-  window.requestAnimationFrame(animate);
+	window.requestAnimationFrame(animate);
 
-  handleResize({ target: window });
+	handleResize({ target: window });
 }
 
 /**
@@ -417,29 +417,29 @@ function setup(shaders) {
  * @param {DOMHighResTimeStamp} timestamp - The current time in milliseconds.
  */
 function animate(timestamp) {
-  window.requestAnimationFrame(animate);
-  if (!last_time) {
-    last_time = timestamp;
-    clearAll();
-  }
-  const elapsed = timestamp - last_time;
-  gl.clear(gl.COLOR_BUFFER_BIT);
+	window.requestAnimationFrame(animate);
+	if (!last_time) {
+		last_time = timestamp;
+		clearAll();
+	}
+	const elapsed = timestamp - last_time;
+	gl.clear(gl.COLOR_BUFFER_BIT);
 
-  switch (curve_mode) {
-    case BEZIER_MODE:
-      gl.useProgram(draw_program_bezier);
-      break;
-    case CATMULL_ROM_MODE:
-      gl.useProgram(draw_program_catmull_rom);
-      break;
-    default:
-      gl.useProgram(draw_program_bspline);
-  }
+	switch (curve_mode) {
+		case BEZIER_MODE:
+			gl.useProgram(draw_program_bezier);
+			break;
+		case CATMULL_ROM_MODE:
+			gl.useProgram(draw_program_catmull_rom);
+			break;
+		default:
+			gl.useProgram(draw_program_bspline);
+	}
 
-  calculateVelocity(Math.round(((base_velocity * elapsed) / 7) * 1000) / 1000);
-  renderCurves();
-  gl.useProgram(null);
-  last_time = timestamp;
+	calculateVelocity(Math.round(((base_velocity * elapsed) / 7) * 1000) / 1000);
+	renderCurves();
+	gl.useProgram(null);
+	last_time = timestamp;
 }
 
 /**
@@ -447,84 +447,84 @@ function animate(timestamp) {
  * @param {vec2} coordinates - The coordinates of the control point.
  */
 function addControlPoint(coordinates) {
-  if (control_points.length >= MAX_CONTROL_POINTS_PER_CURVE) {
-    control_points.shift();
-  }
+	if (control_points.length >= MAX_CONTROL_POINTS_PER_CURVE) {
+		control_points.shift();
+	}
 
-  if (is_dragging) {
-    if (control_points.length === 0) {
-      control_points.push(coordinates);
-    } else {
-      const last_control_point = control_points[control_points.length - 1];
-      const distance = calculateDistance(coordinates, last_control_point);
-      if (distance >= DISTANCE_THRESHOLD) {
-        control_points.push(coordinates);
-      }
-    }
-  } else {
-    control_points.push(coordinates);
-  }
+	if (is_dragging) {
+		if (control_points.length === 0) {
+			control_points.push(coordinates);
+		} else {
+			const last_control_point = control_points[control_points.length - 1];
+			const distance = calculateDistance(coordinates, last_control_point);
+			if (distance >= DISTANCE_THRESHOLD) {
+				control_points.push(coordinates);
+			}
+		}
+	} else {
+		control_points.push(coordinates);
+	}
 }
 
 /**
  * Finalizes the current curve by adding it to the list of curves.
  */
 function finalizeCurve() {
-  if (control_points.length < 4) {
-    return;
-  }
-  curves.push(
-    new Curve(
-      control_points,
-      base_velocity,
-      num_segments,
-      next_curve_color,
-      next_curve_size,
-      curve_mode,
-      special_mode,
-      next_shape_type
-    )
-  );
-  generateNewColorSizeAndShape();
-  control_points = [];
-  document.getElementById("curveCount").textContent = curves.length;
+	if (control_points.length < 4) {
+		return;
+	}
+	curves.push(
+		new Curve(
+			control_points,
+			base_velocity,
+			num_segments,
+			next_curve_color,
+			next_curve_size,
+			curve_mode,
+			special_mode,
+			next_shape_type
+		)
+	);
+	generateNewColorSizeAndShape();
+	control_points = [];
+	document.getElementById("curveCount").textContent = curves.length;
 }
 
 /**
  * Renders all the curves and their sample points.
  */
 function renderCurves() {
-  curves.forEach((curve) => {
-    if (is_animating) curve.updatePositions();
-    if (draw_lines) curve.render(gl, getProgramForCurveMode(), index_buffer);
-    if (draw_sample_points)
-      curve.renderSamplePoints(
-        gl,
-        getPointsProgramForCurveMode(),
-        index_buffer
-      );
-  });
+	curves.forEach((curve) => {
+		if (is_animating) curve.updatePositions();
+		if (draw_lines) curve.render(gl, getProgramForCurveMode(), index_buffer);
+		if (draw_sample_points)
+			curve.renderSamplePoints(
+				gl,
+				getPointsProgramForCurveMode(),
+				index_buffer
+			);
+	});
 
-  if (control_points.length >= 4) {
-    const tempCurve = new Curve(
-      control_points,
-      base_velocity,
-      num_segments,
-      next_curve_color,
-      next_curve_size,
-      curve_mode,
-      special_mode,
-      next_shape_type
-    );
-    if (draw_lines)
-      tempCurve.render(gl, getProgramForCurveMode(), index_buffer);
-    if (draw_sample_points)
-      tempCurve.renderSamplePoints(
-        gl,
-        getPointsProgramForCurveMode(),
-        index_buffer
-      );
-  }
+	if (control_points.length >= 4) {
+		const tempCurve = new Curve(
+			control_points,
+			base_velocity,
+			num_segments,
+			next_curve_color,
+			next_curve_size,
+			curve_mode,
+			special_mode,
+			next_shape_type
+		);
+		if (draw_lines)
+			tempCurve.render(gl, getProgramForCurveMode(), index_buffer);
+		if (draw_sample_points)
+			tempCurve.renderSamplePoints(
+				gl,
+				getPointsProgramForCurveMode(),
+				index_buffer
+			);
+	}
 }
 
 /**
@@ -532,14 +532,14 @@ function renderCurves() {
  * @returns {WebGLProgram} The shader program for the current curve mode.
  */
 function getProgramForCurveMode() {
-  switch (curve_mode) {
-    case BEZIER_MODE:
-      return draw_program_bezier;
-    case CATMULL_ROM_MODE:
-      return draw_program_catmull_rom;
-    default:
-      return draw_program_bspline;
-  }
+	switch (curve_mode) {
+		case BEZIER_MODE:
+			return draw_program_bezier;
+		case CATMULL_ROM_MODE:
+			return draw_program_catmull_rom;
+		default:
+			return draw_program_bspline;
+	}
 }
 
 /**
@@ -547,22 +547,22 @@ function getProgramForCurveMode() {
  * @returns {WebGLProgram} The shader program for drawing points for the current curve mode.
  */
 function getPointsProgramForCurveMode() {
-  switch (curve_mode) {
-    case BEZIER_MODE:
-      return draw_points_bezier;
-    case CATMULL_ROM_MODE:
-      return draw_points_catmull_rom;
-    default:
-      return draw_points_bspline;
-  }
+	switch (curve_mode) {
+		case BEZIER_MODE:
+			return draw_points_bezier;
+		case CATMULL_ROM_MODE:
+			return draw_points_catmull_rom;
+		default:
+			return draw_points_bspline;
+	}
 }
 
 loadShadersFromURLS([
-  "shader.vert",
-  "shader.frag",
-  "drawpoints.frag",
-  "bezier.vert",
-  "catmull_rom.vert",
+	"shader.vert",
+	"shader.frag",
+	"drawpoints.frag",
+	"bezier.vert",
+	"catmull_rom.vert",
 ])
-  .then(setup)
-  .catch((error) => console.error("Error loading shaders:", error));
+	.then(setup)
+	.catch((error) => console.error("Error loading shaders:", error));
